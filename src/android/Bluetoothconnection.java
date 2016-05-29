@@ -1,5 +1,5 @@
   
-package org.apache.cordova.bluetooth;
+package org.apache.cordova.Bluetoothconnection;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;

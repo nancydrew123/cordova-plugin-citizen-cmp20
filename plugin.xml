@@ -41,11 +41,11 @@
     <platform name="android">
         <config-file target="res/xml/config.xml" parent="/*">
             <feature name="Citizen Blutooth Printer">
-                <param name="android-package" value="org.apache.cordova.bluetooth.BlePrinter"/>
+                <param name="android-package" value="org.apache.cordova.bluetooth.Bluetoothconnection"/>
             </feature>
         </config-file>
 
-        <source-file src="src/android/BlePrinter.java" target-dir="src/org/apache/cordova/bleprinter" />
+        <source-file src="src/android/BlePrinter.java" target-dir="src/org/apache/cordova/Bluetoothconnection" />
 		<source-file src="src/android/Citizen_Android_1071.jar" target-dir="libs" />
         <config-file target="AndroidManifest.xml" parent="/manifest">
             <uses-permission android:name="android.permission.BLUETOOTH"/>

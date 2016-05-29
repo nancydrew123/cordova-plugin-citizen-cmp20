@@ -31,6 +31,6 @@ module.exports = {
       exec(fnSuccess, fnError, "BluetoothPrinter", "list", []);
    },
    connect: function (macAddress, success, failure) {
-        cordova.exec(success, failure, "BluetoothSerial", "connect", [macAddress]);
+        cordova.exec(success, failure, "BluetoothPrinter", "connect", [macAddress]);
     }
 };

@@ -45,7 +45,7 @@
             </feature>
         </config-file>
 
-        <source-file src="src/android/BlePrinter.java" target-dir="src/org/apache/cordova/Bluetoothconnection" />
+        <source-file src="src/android/Bluetoothconnection.java" target-dir="src/org/apache/cordova/Bluetoothconnection" />
 		<source-file src="src/android/Citizen_Android_1071.jar" target-dir="libs" />
         <config-file target="AndroidManifest.xml" parent="/manifest">
             <uses-permission android:name="android.permission.BLUETOOTH"/>

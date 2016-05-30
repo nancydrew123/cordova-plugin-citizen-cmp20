@@ -113,8 +113,7 @@ public class Bluetoothconnection extends CordovaPlugin {
 				if (pairedDevices.size() > 0) {
 					JSONArray json = new JSONArray();
 					for (BluetoothDevice device : pairedDevices) {
-						json.put(device.getName() + "\n"
-								+ device.getAddress() "[Paired]");
+						json.put(device.getName() +"\n["+device.getAddress()+"] [Paired]");
 					}
 					callbackContext.success(json);
 				} else {

@@ -27,7 +27,7 @@
     <description>Cordova Citizen Blutooth Printer Plugin</description>
     <license>Apache 2.0</license>
     <keywords>cordova,bluetooth,printer</keywords>
-    <repo>https://git-wip-us.apache.org/repos/asf/cordova-plugin-vibration.git</repo>
+    <repo>https://github.com/nancydrew123/cordova-plugin-citizen-cmp20.git</repo>
     <issue>https://issues.apache.org/jira/browse/CB/component/12320639</issue>
 
     <js-module src="www/ble-printer.js" name="blePrinter">
@@ -46,7 +46,7 @@
         </config-file>
 
         <source-file src="src/android/Bluetoothconnection.java" target-dir="src/org/apache/cordova/Bluetoothconnection" />
-		<source-file src="src/android/Citizen_Android_1071.jar" target-dir="libs" />
+		<source-file src="src/android/Citizen_Android_1071.jar" target-dir="src/org/apache/cordova/Bluetoothconnection" />
         <config-file target="AndroidManifest.xml" parent="/manifest">
             <uses-permission android:name="android.permission.BLUETOOTH"/>
             <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>

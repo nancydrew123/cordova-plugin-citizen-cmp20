@@ -28,6 +28,7 @@ var exec = require('cordova/exec');
 module.exports = {
 
  list: function(fnSuccess, fnError){
+	 alert("hai");
       exec(fnSuccess, fnError, "BluetoothPrinter", "list", []);
    },
    connect: function (macAddress, success, failure) {

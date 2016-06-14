@@ -147,6 +147,7 @@ public class Bluetoothconnection extends CordovaPlugin {
 				callbackContext.error("No Bluetooth Device Found");
 				return true;
 			}
+			callbackContext.success("Printed Successfuly" + true);
 			return true;
 		}
 		return false;
@@ -266,7 +267,7 @@ public class Bluetoothconnection extends CordovaPlugin {
 			Log.e(LOG_TAG,"Printing success");
 
 			Toast.makeText(this.cordova.getActivity(), "Successfully printed", Toast.LENGTH_LONG).show();
-			callbackContext.success("Printed Successfuly" + true);
+		
 
 			return true;
 

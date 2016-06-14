@@ -1,4 +1,4 @@
-/*
+ /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -27,11 +27,10 @@ var exec = require('cordova/exec');
 
 module.exports = {
 
- list: function(fnSuccess, fnError){
-	 alert("hai");
-      exec(fnSuccess, fnError, "BluetoothPrinter", "list", []);
-   },
-   connect: function (macAddress, success, failure) {
-        cordova.exec(success, failure, "BluetoothPrinter", "connect", [macAddress]);
-    }
+    print: function (strdata, success, failure) {
+		//alert("enter to"+ strdata);
+            exec(success, failure, "Bluetoothconnection", "print", [strdata]);
+        }
 };
+
+

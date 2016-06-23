@@ -265,7 +265,7 @@ public class Bluetoothconnection extends CordovaPlugin {
 
 
 			Log.e(LOG_TAG,"Printing success");
-
+				mmSocket.close();
 			Toast.makeText(this.cordova.getActivity(), "Successfully printed", Toast.LENGTH_LONG).show();
 		
 

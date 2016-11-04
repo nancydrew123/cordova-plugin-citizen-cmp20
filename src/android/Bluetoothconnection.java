@@ -1,4 +1,3 @@
-
 package org.apache.cordova.bluetooth;
 
 import org.apache.cordova.CordovaArgs;
@@ -15,13 +14,17 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.Iterator;
+import java.util.Vector;
+
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.app.ProgressDialog;
 
-import android.R;
+import com.citizen.*;
 import com.citizen.port.android.BluetoothPort;
 import com.citizen.request.android.RequestHandler;
 import android.content.BroadcastReceiver;
@@ -57,6 +60,7 @@ import com.citizen.jpos.command.CPCLConst;
 import com.citizen.jpos.printer.CPCLPrinter;
 import com.citizen.jpos.command.ESCPOSConst;
 
+
 public class Bluetoothconnection extends CordovaPlugin {
 
 	private static final String LIST = "list";
@@ -77,9 +81,11 @@ public class Bluetoothconnection extends CordovaPlugin {
 	private BluetoothPort bluetoothPort;
 	private String lastConnAddr;
 	byte FONT_TYPE;
-	private static BluetoothSocket btsocket;
 	private static OutputStream btoutputstream;
+	private static InputStream btinputtstream;
 	private  BluetoothDevice mmDevice;
+
+	private String strCount;
 
 	//	private static final UUID UUID_SPP = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 	private ConnectThread mConnectThread;
@@ -97,6 +103,7 @@ public class Bluetoothconnection extends CordovaPlugin {
 	public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
 
 
+		clearBtDevData();
 		if (mBluetoothAdapter == null) {
 			mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 			bluetoothSetup(callbackContext);
@@ -147,10 +154,13 @@ public class Bluetoothconnection extends CordovaPlugin {
 				callbackContext.error("No Bluetooth Device Found");
 				return true;
 			}
-			callbackContext.success("Printed Successfuly" + true);
 			return true;
 		}
 		return false;
+	}
+	private void clearBtDevData()
+	{
+		remoteDevices = new Vector<BluetoothDevice>();
 	}
 
 	public void bluetoothSetup(CallbackContext callbackContext)
@@ -226,14 +236,15 @@ public class Bluetoothconnection extends CordovaPlugin {
 					return false;
 				}
 
+//				connectionTask = new connTask();
+//				connectionTask.execute(device);
+
 				mConnectThread = new ConnectThread(device);
 				mConnectThread.start();
 
-				Log.e(TAG, "connect to: " + device);
-				return true;
 				/*Toast.makeText(this.cordova.getActivity(), "Bluetooth Connected to" + device.getName(), Toast.LENGTH_LONG).show();
 				callbackContext.success("Your device is connect to " + device.getName());
-*/
+*/			return true;
 			}
 		}
 		catch(Exception e)
@@ -254,20 +265,57 @@ public class Bluetoothconnection extends CordovaPlugin {
 			// TODO Auto-generated method stub
 
 
-			btoutputstream = mmSocket.getOutputStream();
+			int count = 1;
+
 			String str = args.getString(0);
+
 			String newline = "\n";
 
 			String msg = str.toString();
+
 			msg += "\n";
 
-			btoutputstream.write(msg.getBytes());
+			StringBuffer sb = new StringBuffer();
+			for(int i=0;i<16;i++)
+			{
+				sb.append(msg);
+			}
+//			strCount = number.getText().toString();
+//			count = Integer.parseInt(strCount);
 
+			cpclPrinter.setForm(0, 200, 200, 406, 16);
+			cpclPrinter.setMedia(CPCLConst.CMP_CPCL_CONTINUOUS);
+			// MultiLine mode.
+			cpclPrinter.setMultiLine(15);
+			cpclPrinter.multiLineText(0, 0, 0, 10, 20);
+			cpclPrinter.multiLineData(sb.toString());
+			cpclPrinter.resetMultiLine();
+			// Print
+			cpclPrinter.printForm();
+//			btoutputstream = mmSocket.getOutputStream();
+//
+//			String str = args.getString(0);
+//
+//			String newline = "\n";
+//
+//			String msg = str.toString();
+//
+////			msg += "\n";
+//			btinputtstream = msg;
+//			byte[] buf = new byte[2048];
 
+//			if(mmSocket.isConnected()) {
+//				btoutputstream.write(msg.getBytes());
+//			} else
+//			{
+//				mmSocket.connect();
+//			//	btoutputstream.write(msg.getBytes());
+//			}
+//			btoutputstream.flush();
 			Log.e(LOG_TAG,"Printing success");
-				mmSocket.close();
+			mmSocket.close();
 			Toast.makeText(this.cordova.getActivity(), "Successfully printed", Toast.LENGTH_LONG).show();
-		
+			callbackContext.success("Printed Successfuly : " + msg.getBytes());
 
 			return true;
 
@@ -275,7 +323,7 @@ public class Bluetoothconnection extends CordovaPlugin {
 		} catch (Exception e) {
 			Log.e(LOG_TAG,"Printing error" + e.getMessage());
 			e.printStackTrace();
-			callbackContext.error("Some error occured" + false);
+			callbackContext.error("Some error occured new " + e.getMessage());
 		}
 
 		return false;
@@ -292,7 +340,7 @@ public class Bluetoothconnection extends CordovaPlugin {
 		{
 			dialog.setTitle("Bluetooth");
 			dialog.setMessage("Connecting");
-			dialog.show();
+	//		dialog.show();
 			super.onPreExecute();
 		}
 
@@ -304,6 +352,7 @@ public class Bluetoothconnection extends CordovaPlugin {
 			{
 				bluetoothPort.connect(params[0]);
 				lastConnAddr = params[0].getAddress();
+				lastConnAddr=lastConnAddr.replace(" ", "");
 				retVal = Integer.valueOf(0);
 			}
 			catch (IOException e)
@@ -344,22 +393,36 @@ public class Bluetoothconnection extends CordovaPlugin {
 
 			// Get a BluetoothSocket to connect with the given BluetoothDevice
 			// MY_UUID is the app's UUID string, also used by the server code
-			UUID uuid = device.getUuids()[0]
-					.getUuid();
+//			UUID uuid = device.getUuids()[0].getUuid();
+			UUID uuid = (UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
+
+			mmSocket = null;
+
+//			 uuUUIDid = java.util.fetchUuidsWithSdp();
+
 			try {
-				Method m = mmDevice.getClass().getMethod("createRfcommSocket",
-						new Class[] { int.class });
-				mmSocket = (BluetoothSocket) m.invoke(mmDevice, Integer.valueOf(1));
+				mmSocket = device.createRfcommSocketToServiceRecord(uuid);
+			} catch (Exception e) {Log.e("","Error creating socket");}
 
-				Thread.sleep(2000);
+			try {
 				mmSocket.connect();
+				Log.e("","Connected");
+			} catch (IOException e) {
+				Log.e("",e.getMessage());
+				try {
+					Log.e("","trying fallback...");
 
-			} catch (NoSuchMethodException e) {
-			} catch (SecurityException e) {
-			} catch (IllegalArgumentException e) {
-			} catch (IllegalAccessException e) {
-			} catch (InvocationTargetException e) {
-			} catch (Exception e) {}
+					mmSocket =(BluetoothSocket) device.getClass().getMethod("createRfcommSocket", new Class[] {int.class}).invoke(device,1);
+					mmSocket.connect();
+
+					Log.e("","Connected");
+				}
+				catch (Exception e2) {
+					Log.e("", "Couldn't establish Bluetooth connection!");
+				}
+			}
+
+
 
 
 //			mmSocket = device

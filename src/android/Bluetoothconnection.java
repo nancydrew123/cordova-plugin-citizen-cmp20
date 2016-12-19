@@ -157,7 +157,24 @@ public class Bluetoothconnection extends CordovaPlugin {
 
 
 							sts = printerStatus();
-							if(sts == ESCPOSConst.CMP_SUCCESS) {
+
+							String statusMsg;
+
+							if(sts == ESCPOSConst.CMP_STS_NORMAL)
+								statusMsg = new String("Normal");
+							else
+							{
+								statusMsg = new String();
+								if((sts & ESCPOSConst.CMP_STS_COVER_OPEN) > 0)
+									statusMsg = statusMsg + "Cover Open\r\n";
+								if((sts & ESCPOSConst.CMP_STS_PAPER_EMPTY) > 0)
+									statusMsg = statusMsg + "Paper Empty\r\n";
+								if((sts & ESCPOSConst.CMP_STS_BATTERY_LOW) > 0)
+									statusMsg = statusMsg + "Battery Low";
+							}
+							Toast.makeText(this.cordova.getActivity(), statusMsg, Toast.LENGTH_LONG).show();
+
+
 //								sts = posPtr.status();
 //								if (sts == ESCPOSConst.CMP_SUCCESS) {
 
@@ -169,7 +186,7 @@ public class Bluetoothconnection extends CordovaPlugin {
 //							}
 
 //								}
-							}
+
 
 						}
 						catch(Exception e)
@@ -210,7 +227,7 @@ public class Bluetoothconnection extends CordovaPlugin {
 	{
 		int sts;
 
-		sts = posPtr.printerCheck();
+		sts = posPtr.printerCheck(5000);
 		if(sts != ESCPOSConst.CMP_SUCCESS) return ESCPOSConst.CMP_FAIL;
 
 		sts = posPtr.status();

@@ -5,10 +5,13 @@ import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.LOG;
 import org.apache.cordova.PluginResult;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.graphics.BitmapFactory;
+import android.widget.EditText;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -45,6 +48,11 @@ import java.util.Iterator;
 import java.util.Vector;
 import java.util.Set;
 import java.util.UUID;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+
+import android.os.AsyncTask.Status;
 
 
 import java.io.UnsupportedEncodingException;
@@ -60,6 +68,14 @@ import com.citizen.jpos.command.CPCLConst;
 import com.citizen.jpos.printer.CPCLPrinter;
 import com.citizen.jpos.command.ESCPOSConst;
 
+
+import com.citizen.jpos.command.CPCLConst;
+import com.citizen.jpos.command.ESCPOS;
+import com.citizen.jpos.command.ESCPOSConst;
+import com.citizen.jpos.printer.ESCPOSPrinter;
+import com.citizen.jpos.printer.CMPPrint;
+
+import io.cordova.myapp648ca0.R;
 
 public class Bluetoothconnection extends CordovaPlugin {
 
@@ -77,7 +93,7 @@ public class Bluetoothconnection extends CordovaPlugin {
 	private BroadcastReceiver discoveryResult;
 	private Thread hThread;
 	private Context context;
-	private connTask connectionTask;
+	private Bluetoothconnection.connTask connectionTask;
 	private BluetoothPort bluetoothPort;
 	private String lastConnAddr;
 	byte FONT_TYPE;
@@ -85,18 +101,34 @@ public class Bluetoothconnection extends CordovaPlugin {
 	private static InputStream btinputtstream;
 	private  BluetoothDevice mmDevice;
 
-	private String strCount;
 
 	//	private static final UUID UUID_SPP = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
-	private ConnectThread mConnectThread;
+//	private ConnectThread mConnectThread;
 	private CPCLPrinter cpclPrinter;
+	private ESCPOSPrinter posPtr;
+	private final char ESC = ESCPOS.ESC;
+	private final char LF = ESCPOS.LF;
 
+
+	//	private final char ESC = ESCPOS.ESC;
 	private  BluetoothSocket mmSocket;
 	String macAddress;
 	String devicename;
+
+	private static final String dir = Environment.getExternalStorageDirectory().getAbsolutePath() + "//temp";
+	private static final String fileName;
+
+	private String strCount;
+
+	static {
+		fileName = dir + "//BTPrinter";
+	}
+
+
 	public Bluetoothconnection()
 	{
 		cpclPrinter = new CPCLPrinter();
+		posPtr = new ESCPOSPrinter("Shift_JIS");
 	}
 
 	@Override
@@ -114,15 +146,29 @@ public class Bluetoothconnection extends CordovaPlugin {
 			boolean secure = true;
 			if(listBondedDevices(callbackContext)) //getting paired device
 			{
+				Toast.makeText(this.cordova.getActivity(), "Devices Listed Successfully", Toast.LENGTH_LONG).show();
 				try
 				{
 					if(connect(callbackContext)) //connecting to the paired device
 					{
 						try
 						{
-							if(mmSocket != null) {
-								Log.e(LOG_TAG,"Getting to printing function");
-								print_bt(args, callbackContext); //Taking the prin of the text
+							int sts;
+
+
+							sts = printerStatus();
+							if(sts == ESCPOSConst.CMP_SUCCESS) {
+//								sts = posPtr.status();
+//								if (sts == ESCPOSConst.CMP_SUCCESS) {
+
+
+//							if(mmSocket != null) {
+									Log.e(LOG_TAG, "Getting to printing function");
+									print_bt(args, callbackContext); //Taking the prin of the text
+
+//							}
+
+//								}
 							}
 
 						}
@@ -154,9 +200,23 @@ public class Bluetoothconnection extends CordovaPlugin {
 				callbackContext.error("No Bluetooth Device Found");
 				return true;
 			}
+
 			return true;
 		}
 		return false;
+	}
+
+	public int printerStatus() throws UnsupportedEncodingException
+	{
+		int sts;
+
+		sts = posPtr.printerCheck();
+		if(sts != ESCPOSConst.CMP_SUCCESS) return ESCPOSConst.CMP_FAIL;
+
+		sts = posPtr.status();
+		if(sts != ESCPOSConst.CMP_SUCCESS) return sts;
+
+		return sts;
 	}
 	private void clearBtDevData()
 	{
@@ -225,27 +285,20 @@ public class Bluetoothconnection extends CordovaPlugin {
 			Log.e(LOG_TAG,"macaddress in connect" + macAddress );
 			BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(macAddress);
 
-			if (device != null) {
-
-				if((connectionTask != null) && (connectionTask.getStatus() == AsyncTask.Status.RUNNING))
-				{
-					connectionTask.cancel(true);
-					if(!connectionTask.isCancelled())
-						connectionTask.cancel(true);
-					connectionTask = null;
-					return false;
+			if(this.connectionTask != null && this.connectionTask.getStatus() == Status.RUNNING) {
+				this.connectionTask.cancel(true);
+				if(!this.connectionTask.isCancelled()) {
+					this.connectionTask.cancel(true);
 				}
 
-//				connectionTask = new connTask();
-//				connectionTask.execute(device);
-
-				mConnectThread = new ConnectThread(device);
-				mConnectThread.start();
-
-				/*Toast.makeText(this.cordova.getActivity(), "Bluetooth Connected to" + device.getName(), Toast.LENGTH_LONG).show();
-				callbackContext.success("Your device is connect to " + device.getName());
-*/			return true;
+				this.connectionTask = null;
 			}
+
+			this.connectionTask = new Bluetoothconnection.connTask();
+			this.connectionTask.execute(new BluetoothDevice[]{device});
+			Toast.makeText(this.cordova.getActivity(), "Connected To A Device Successfully", Toast.LENGTH_LONG).show();
+
+			return true;
 		}
 		catch(Exception e)
 		{
@@ -264,8 +317,12 @@ public class Bluetoothconnection extends CordovaPlugin {
 
 			// TODO Auto-generated method stub
 
+			Toast.makeText(this.cordova.getActivity(), "Enter To Print Function", Toast.LENGTH_LONG).show();
 
-			int count = 1;
+//
+//			int count = 1;
+
+			//btoutputstream = mmSocket.getOutputStream();
 
 			String str = args.getString(0);
 
@@ -273,49 +330,25 @@ public class Bluetoothconnection extends CordovaPlugin {
 
 			String msg = str.toString();
 
-			msg += "\n";
+			msg += "\r\n";
 
-			StringBuffer sb = new StringBuffer();
-			for(int i=0;i<16;i++)
-			{
-				sb.append(msg);
-			}
-//			strCount = number.getText().toString();
-//			count = Integer.parseInt(strCount);
+			posPtr.printNormal(ESC + "|cA" + ESC + "|bC" + ESC + "|2C" + "Receipt" + LF + LF);
+/*
+			posPtr.printBitmap(BitmapFactory.decodeResource(cordova.getActivity().getApplicationContext().getResources(), R.drawable.logo_m),CMPPrint.CMP_ALIGNMENT_CENTER);
+*/
+			posPtr.printBitmap(BitmapFactory.decodeResource(cordova.getActivity().getApplicationContext().getResources(), R.drawable.img_logo),CMPPrint.CMP_ALIGNMENT_CENTER,200);
+			posPtr.lineFeed(2);
+			posPtr.printString(msg);
+			posPtr.printNormal(ESC + "|cA" + ESC + "|4C" + ESC + "|bC" + "Thank you" + LF);
+			//posPtr.lineFeed(2);
+			Log.e(LOG_TAG, "Printing success");
 
-			cpclPrinter.setForm(0, 200, 200, 406, 16);
-			cpclPrinter.setMedia(CPCLConst.CMP_CPCL_CONTINUOUS);
-			// MultiLine mode.
-			cpclPrinter.setMultiLine(15);
-			cpclPrinter.multiLineText(0, 0, 0, 10, 20);
-			cpclPrinter.multiLineData(sb.toString());
-			cpclPrinter.resetMultiLine();
-			// Print
-			cpclPrinter.printForm();
-//			btoutputstream = mmSocket.getOutputStream();
-//
-//			String str = args.getString(0);
-//
-//			String newline = "\n";
-//
-//			String msg = str.toString();
-//
-////			msg += "\n";
-//			btinputtstream = msg;
-//			byte[] buf = new byte[2048];
-
-//			if(mmSocket.isConnected()) {
-//				btoutputstream.write(msg.getBytes());
-//			} else
-//			{
-//				mmSocket.connect();
-//			//	btoutputstream.write(msg.getBytes());
-//			}
-//			btoutputstream.flush();
-			Log.e(LOG_TAG,"Printing success");
-			mmSocket.close();
 			Toast.makeText(this.cordova.getActivity(), "Successfully printed", Toast.LENGTH_LONG).show();
+			callbackContext.success("Printed Successfuly : ");
+/*
 			callbackContext.success("Printed Successfuly : " + msg.getBytes());
+*/
+			/*mmSocket.close();*/
 
 			return true;
 
@@ -331,153 +364,56 @@ public class Bluetoothconnection extends CordovaPlugin {
 
 
 	// Bluetooth Connection Task.
-	class connTask extends AsyncTask<BluetoothDevice, Void, Integer>
-	{
+	class connTask extends AsyncTask<BluetoothDevice, Void, Integer> {
+//		private final ProgressDialog dialog = new ProgressDialog(Bluetoothconnection.this);
+
 		private final ProgressDialog dialog = new ProgressDialog( cordova.getActivity().getApplicationContext());
 
-		@Override
-		protected void onPreExecute()
-		{
+		connTask() {
+		}
+
+		protected void onPreExecute() {
 			dialog.setTitle("Bluetooth");
 			dialog.setMessage("Connecting");
-	//		dialog.show();
+//			this.dialog.show();
 			super.onPreExecute();
 		}
 
-		@Override
-		protected Integer doInBackground(BluetoothDevice... params)
-		{
-			Integer retVal = null;
-			try
-			{
-				bluetoothPort.connect(params[0]);
-				lastConnAddr = params[0].getAddress();
-				lastConnAddr=lastConnAddr.replace(" ", "");
+		protected Integer doInBackground(BluetoothDevice... params) {
+			Integer retVal = 1;
+
+			try {
+				Bluetoothconnection.this.bluetoothPort.connect(params[0]);
+				Bluetoothconnection.this.macAddress = params[0].getAddress();
 				retVal = Integer.valueOf(0);
-			}
-			catch (IOException e)
-			{
+			} catch (IOException var4) {
 				retVal = Integer.valueOf(-1);
 			}
+
 			return retVal;
 		}
 
-		@Override
-		protected void onPostExecute(Integer result)
-		{
-			if(result.intValue() == 0)	// Connection success.
-			{
+		protected void onPostExecute(Integer result) {
+			if(result.intValue() == 0) {
 				RequestHandler rh = new RequestHandler();
-				hThread = new Thread(rh);
-				hThread.start();
-			}
-			else	// Connection failed.
-			{
-				if(dialog.isShowing())
-					dialog.dismiss();
+				Bluetoothconnection.this.hThread = new Thread(rh);
+				Bluetoothconnection.this.hThread.start();
 
+				if(this.dialog.isShowing()) {
+					this.dialog.dismiss();
+				}
+
+			} else {
+				if(this.dialog.isShowing()) {
+					this.dialog.dismiss();
+				}
+
+//				AlertView.showAlert(Bluetoothconnection.this.getResources().getString(2131034118), Bluetoothconnection.this.getResources().getString(2131034123), Bluetoothconnection.this.context);
 			}
+
 			super.onPostExecute(result);
 		}
 	}
-
-	private class ConnectThread extends Thread {
-
-		//private final BluetoothDevice mmDevice;
-
-		public ConnectThread(BluetoothDevice device) {
-			// Use a temporary object that is later assigned to mmSocket,
-			// because mmSocket is final
-			BluetoothSocket tmp = null;
-			mmDevice = device;
-
-			// Get a BluetoothSocket to connect with the given BluetoothDevice
-			// MY_UUID is the app's UUID string, also used by the server code
-//			UUID uuid = device.getUuids()[0].getUuid();
-			UUID uuid = (UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
-
-			mmSocket = null;
-
-//			 uuUUIDid = java.util.fetchUuidsWithSdp();
-
-			try {
-				mmSocket = device.createRfcommSocketToServiceRecord(uuid);
-			} catch (Exception e) {Log.e("","Error creating socket");}
-
-			try {
-				mmSocket.connect();
-				Log.e("","Connected");
-			} catch (IOException e) {
-				Log.e("",e.getMessage());
-				try {
-					Log.e("","trying fallback...");
-
-					mmSocket =(BluetoothSocket) device.getClass().getMethod("createRfcommSocket", new Class[] {int.class}).invoke(device,1);
-					mmSocket.connect();
-
-					Log.e("","Connected");
-				}
-				catch (Exception e2) {
-					Log.e("", "Couldn't establish Bluetooth connection!");
-				}
-			}
-
-
-
-
-//			mmSocket = device
-//					.createRfcommSocketToServiceRecord(uuid);
-
-		}
-		@Override
-		public void run() {
-			// Cancel discovery because it will slow down the connection
-			mBluetoothAdapter.cancelDiscovery();
-
-			try {
-
-
-
-				// Connect the device through the socket. This will block
-				// until it succeeds or throws an exception
-
-
-				try {
-
-
-
-					Thread.sleep(2000);
-					mmSocket.connect();
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-
-			} catch (IOException connectException) {
-				// Unable to connect; close the socket and get out
-				/*try {
-					mmSocket.close();
-				} catch (IOException closeException) { }*/
-				return;
-			}
-
-			// Do work to manage the connection (in a separate thread)
-//        manageConnectedSocket(mmSocket);
-		}
-
-		/** Will cancel an in-progress connection, and close the socket */
-		public void cancel() {
-			try {
-				mmSocket.close();
-			} catch (IOException e) { }
-		}
-
-
-
-
-	}
-
-
-
 
 }
 
